@@ -1,0 +1,33 @@
+# Configurações WireGuard e qualquer arquivo com chave: NUNCA versionar
+*.conf
+*.conf.*
+*.key
+*.pem
+*.pfx
+*.p12
+*.ovpn
+
+# Segredos e ambiente (o projeto não usa, e não deve aparecer)
+.env
+.env.*
+
+# Logs e relatórios de diagnóstico
+*.log
+*.log.*
+logs/
+diagnostico/
+diagnostico-*.txt
+
+# Saídas de build e de teste
+dist/
+out/
+testResults*.xml
+coverage*.xml
+
+# Sistema e editores
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp
