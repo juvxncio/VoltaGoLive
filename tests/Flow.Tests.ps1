@@ -212,7 +212,6 @@ InModuleScope VoltaGoLive {
                     (Get-TestKeyName) + ' = ' + (Get-TestKey -Fill 'Q')
                 Set-Content -LiteralPath $script:TestPaths.TunnelLog -Value @("2026-01-02T10:00:00 | $leak")
                 Set-Content -LiteralPath $script:TestPaths.LogFile -Value @("2026-01-02T10:00:01 [INFO] $leak")
-                [System.IO.File]::WriteAllText($script:TestPaths.RuntimeConf.Replace('runtime/', 'runtime-'), 'x')
                 $null = New-Item -Path $script:TestPaths.RuntimeDir -ItemType Directory -Force
                 [System.IO.File]::WriteAllText($script:TestPaths.RuntimeConf,
                     (ConvertTo-VglTunnelConf -Text $script:Original -Apps (Get-VglDiscordAppName)))

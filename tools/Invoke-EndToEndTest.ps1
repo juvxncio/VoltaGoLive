@@ -102,6 +102,25 @@ try {
             Write-Output ('Instalação pelo winget falhou: ' + $_.Exception.Message)
         }
     }
+    if ([string]::IsNullOrEmpty($exe)) {
+        Write-Step -Title 'Descoberta: o que o instalador colocou no disco'
+        foreach ($base in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA, $env:ProgramData)) {
+            Get-ChildItem -LiteralPath $base -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '(?i)wiresock|ntkernel|winpkfilter|packet filter' } |
+                ForEach-Object {
+                    Write-Output ('Pasta: ' + $_.FullName)
+                    Get-ChildItem -LiteralPath $_.FullName -Recurse -File -ErrorAction SilentlyContinue |
+                        Where-Object { $_.Extension -in @('.exe', '.sys', '.dll', '.cmd', '.bat') } |
+                        ForEach-Object { Write-Output ('  ' + $_.FullName.Substring($base.Length)) }
+                }
+        }
+        Write-Output 'No PATH:'
+        Get-Command -Name '*wiresock*' -CommandType Application -ErrorAction SilentlyContinue | ForEach-Object { Write-Output ('  ' + $_.Source) }
+        Write-Output 'Serviços:'
+        Get-Service -Name '*wiresock*', '*ndisrd*' -ErrorAction SilentlyContinue | ForEach-Object { Write-Output ('  {0} ({1})' -f $_.Name, $_.Status) }
+        Write-Output 'Pacotes do winget com o nome:'
+        & winget.exe list --name WireSock --accept-source-agreements | Out-String | Write-Output
+    }
     Add-Check -Name 'WireSock instalado e encontrado' -Passed (-not [string]::IsNullOrEmpty($exe))
     if ([string]::IsNullOrEmpty($exe)) {
         throw 'Sem o WireSock não há como continuar.'
