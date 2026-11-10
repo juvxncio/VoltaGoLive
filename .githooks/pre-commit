@@ -1,0 +1,17 @@
+#!/bin/sh
+# Hook de pre-commit do VoltaGoLive.
+# Ative uma vez com: git config core.hooksPath .githooks
+set -e
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: o gitleaks nao esta instalado. Instale (https://github.com/gitleaks/gitleaks) e tente de novo."
+    exit 1
+fi
+gitleaks git --pre-commit --staged --redact --no-banner
+
+if command -v pwsh >/dev/null 2>&1; then
+    SHELL_PS=pwsh
+else
+    SHELL_PS=powershell
+fi
+"$SHELL_PS" -NoProfile -ExecutionPolicy Bypass -File tools/Test-Repository.ps1

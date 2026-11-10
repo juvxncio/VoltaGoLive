@@ -1,0 +1,10 @@
+title = "VoltaGoLive"
+
+[extend]
+useDefault = true
+
+# Regra extra: qualquer chave WireGuard (32 bytes em base64) atribuída a um campo.
+[[rules]]
+id = "wireguard-key-assignment"
+description = "Chave WireGuard atribuída a um campo de configuração"
+regex = '''(?i)key\s*=\s*[A-Za-z0-9+/]{43}='''
