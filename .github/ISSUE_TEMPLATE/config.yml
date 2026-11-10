@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Falha de segurança
+    url: https://github.com/juvxncio/VoltaGoLive/security/advisories/new
+    about: Não abra issue pública. Reporte por aqui, em particular.

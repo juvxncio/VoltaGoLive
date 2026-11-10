@@ -1,0 +1,44 @@
+name: Relatar um problema
+description: Algo não funcionou como esperado
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Nunca cole aqui o seu arquivo `.conf`, chaves, senhas ou o seu endereço IP.**
+        Para falhas de segurança, não abra issue: veja o arquivo SECURITY.md.
+  - type: textarea
+    id: aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Qual botão você usou (Ativar, Desativar, Status, Diagnostico) e o que apareceu na tela.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostico
+    attributes:
+      label: Relatório de diagnóstico
+      description: Rode o Diagnostico.bat e cole o texto aqui. Ele já remove chaves, IPs, seu nome de usuário e o nome do computador.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do VoltaGoLive
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: checkboxes
+    id: conferencia
+    attributes:
+      label: Conferência
+      options:
+        - label: Conferi que não colei chave, senha, arquivo .conf nem endereço IP
+          required: true
