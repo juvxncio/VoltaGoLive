@@ -22,10 +22,31 @@ O resto do computador continua usando a sua conexão normal.
 
 ## O que é
 
-Um conjunto de scripts PowerShell (que você pode abrir e ler) com quatro botões de dois cliques:
+Um conjunto de scripts PowerShell (que você pode abrir e ler). O jeito mais fácil de usar é
+a janela: dois cliques em `VoltaGoLive.bat`.
+
+```text
++--------------------------------------------------+
+| VoltaGoLive                                  [x] |
+|                                                  |
+|  Túnel ATIVO                                     |
+|  Ativo há 0h 12min  |  Discord aberto            |
+|                                                  |
+|  [ Ativar ]   [ Desativar ]   [ Diagnóstico ]    |
+|                                                  |
+|  Configuração: proton.conf  [ Escolher .conf... ]|
+|  +--------------------------------------------+  |
+|  | mensagens do que está acontecendo          |  |
+|  +--------------------------------------------+  |
++--------------------------------------------------+
+```
+
+A janela é feita com o próprio PowerShell (Windows Forms). Não é um programa compilado.
+Quem preferir pode usar os arquivos separados, que fazem exatamente a mesma coisa:
 
 | Arquivo | O que faz |
 | --- | --- |
+| `VoltaGoLive.bat` | Abre a janela com todos os botões |
 | `Ativar.bat` | Fecha o Discord, sobe o túnel só para ele e abre o Discord de novo |
 | `Desativar.bat` | Derruba o túnel, limpa os arquivos temporários e abre o Discord normal |
 | `Status.bat` | Mostra se o túnel está ativo, há quanto tempo e o último handshake |
@@ -79,22 +100,24 @@ programa compilado e não redistribui o WireSock (ele é instalado da fonte ofic
 2. Vá em **Downloads** e depois em **WireGuard configuration**.
 3. Dê um nome qualquer, escolha a plataforma **Windows** e um servidor **fora do Brasil**.
 4. Clique em **Create** e depois em **Download**. Você recebe um arquivo `.conf`.
-5. Coloque esse arquivo dentro da pasta `config`, que fica ao lado do `Ativar.bat`.
-   Deixe só um arquivo `.conf` nessa pasta.
+5. Abra o `VoltaGoLive.bat`, clique em **Escolher arquivo .conf...** e selecione o arquivo.
+   (Ou, se preferir, copie o arquivo para a pasta `config`, que fica ao lado do
+   `Ativar.bat`, deixando só um arquivo `.conf` nela.)
 
 > O arquivo `.conf` contém a sua chave. Não envie para ninguém e não publique em lugar nenhum.
 
 ### 3. Ative
 
-1. Dê dois cliques em `Ativar.bat`.
-2. Na primeira vez, se o WireSock não estiver instalado, responda `S` para instalar. O
-   Windows vai pedir permissão de administrador, porque o WireSock instala um driver de rede.
-3. Espere a mensagem verde `Pronto! O túnel está ativo`.
+1. Na janela, clique em **Ativar** (ou dê dois cliques em `Ativar.bat`).
+2. Na primeira vez, se o WireSock não estiver instalado, aceite a instalação. O Windows vai
+   pedir permissão de administrador, porque o WireSock instala um driver de rede.
+3. Espere a mensagem `Pronto! O túnel está ativo`.
 4. No Discord, teste o Go Live e a câmera.
 
 ### 4. Desative quando terminar
 
-Dê dois cliques em `Desativar.bat`. O Discord volta para a conexão normal.
+Clique em **Desativar** na janela (ou dê dois cliques em `Desativar.bat`). O Discord volta
+para a conexão normal. Fechar a janela não desativa o túnel.
 
 Se você desligar ou reiniciar o computador, o túnel cai sozinho. Rode o `Ativar.bat` de novo
 quando precisar.
