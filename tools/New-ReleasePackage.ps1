@@ -43,7 +43,7 @@ $stage = Join-Path -Path (Join-Path -Path $dist -ChildPath 'stage') -ChildPath $
 $null = New-Item -Path $stage -ItemType Directory -Force
 
 $items = @(
-    'Ativar.bat', 'Desativar.bat', 'Status.bat', 'Diagnostico.bat',
+    'VoltaGoLive.bat', 'Ativar.bat', 'Desativar.bat', 'Status.bat', 'Diagnostico.bat',
     'README.md', 'LICENSE', 'CHANGELOG.md', 'scripts', 'src', 'config'
 )
 foreach ($item in $items) {

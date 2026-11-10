@@ -95,4 +95,12 @@ Describe 'Lançadores de dois cliques' {
         $text | Should -Match 'powershell\.exe -NoProfile'
         $text | Should -Match "`r`n"
     }
+
+    It 'o VoltaGoLive.bat abre a janela, sem acentos e com fim de linha do Windows' {
+        $bytes = [System.IO.File]::ReadAllBytes((Join-Path -Path $script:Root -ChildPath 'VoltaGoLive.bat'))
+        @($bytes | Where-Object { $_ -gt 127 }).Count | Should -Be 0
+        $text = [System.Text.Encoding]::ASCII.GetString($bytes)
+        $text | Should -Match ([regex]::Escape('"%~dp0scripts\Janela.ps1"'))
+        $text | Should -Match "`r`n"
+    }
 }
