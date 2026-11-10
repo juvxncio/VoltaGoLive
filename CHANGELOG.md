@@ -1,4 +1,4 @@
-﻿hangelog
+﻿# Changelog
 
 Todas as mudanças relevantes deste projeto ficam registradas aqui.
 
@@ -7,7 +7,7 @@ e o projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
-## [0.1.0] - Não lançado
+## [0.1.0] - 2026-11-10
 
 ### Adicionado
 
@@ -25,3 +25,5 @@ e o projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   (`VoltaGoLive.bat`), feita em PowerShell, sem programa compilado.
 - Lançadores de dois cliques: `Ativar.bat`, `Desativar.bat`, `Status.bat` e `Diagnostico.bat`.
 - Testes Pester, PSScriptAnalyzer, gitleaks e verificação do repositório no CI.
+- Testado em Windows 11 com uma configuração Proton VPN gratuita real: o túnel sobe, o
+  handshake é confirmado e o Go Live e a câmera do Discord funcionam passando por ele.

@@ -217,10 +217,12 @@ O que é verificado automaticamente a cada mudança, em Windows real (GitHub Act
 - PSScriptAnalyzer sem avisos, no Windows PowerShell 5.1 e no PowerShell 7.
 - gitleaks e a verificação de que nenhuma chave entrou no repositório.
 
-O que **não** tem como ser verificado automaticamente:
+O que **não** tem como ser verificado automaticamente, e por isso foi testado à mão em
+Windows 11 com uma conta Proton VPN gratuita real (versão 0.1.0):
 
-- Se o Discord libera o Go Live e a câmera quando passa pelo túnel.
-- O comportamento com uma conta Proton real.
+- O túnel sobe e o handshake é confirmado.
+- O Go Live e a câmera do Discord funcionam passando pelo túnel.
+- A janela e os lançadores `.bat`.
 
 Veja o roteiro em [docs/TESTE-MANUAL.md](docs/TESTE-MANUAL.md) para testar no seu computador.
 

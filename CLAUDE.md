@@ -68,10 +68,8 @@ verificação do repositório.
 
 ## O que ainda falta verificar
 
-1. A janela vista na tela e clicada por uma pessoa.
-2. O status depois do Ativar mostrar "Discord: aberto". No teste de 2026-11-10 mostrou
-   "fechado" porque foi lido antes de o Update.exe abrir o Discord.exe. O Ativar agora
-   espera até 15 segundos, mas isso ainda não foi visto funcionando.
+Nada pendente da lista original. Em 2026-11-10 o dono testou a janela e o status
+"Discord: aberto" depois do Ativar e autorizou a release `v0.1.0`.
 
 ## Entregas finais ainda devidas ao dono
 
