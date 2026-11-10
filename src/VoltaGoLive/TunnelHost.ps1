@@ -90,8 +90,18 @@ try {
     $open = @($true, $true)
 
     while ($open[0] -or $open[1]) {
+        # Espera até meio segundo por uma linha nova em qualquer uma das duas saídas e
+        # depois grava tudo o que já estiver disponível, sem esperar linha por linha.
+        $pending = New-Object -TypeName 'System.Collections.Generic.List[System.Threading.Tasks.Task]'
         foreach ($index in 0, 1) {
-            if ($open[$index] -and $tasks[$index].Wait(200)) {
+            if ($open[$index]) {
+                $pending.Add($tasks[$index])
+            }
+        }
+        $null = [System.Threading.Tasks.Task]::WaitAny($pending.ToArray(), 500)
+
+        foreach ($index in 0, 1) {
+            while ($open[$index] -and $tasks[$index].IsCompleted) {
                 $text = $tasks[$index].Result
                 if ($null -eq $text) {
                     $open[$index] = $false
