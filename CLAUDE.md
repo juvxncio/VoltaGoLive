@@ -56,18 +56,22 @@ verificação do repositório.
 - O `wiresock-client` precisa de administrador. Sem isso falha com
   `Windows Packet Filter driver is not available!`.
 - `AllowedApps` captura o tráfego de um processo chamado `Discord.exe` e deixa os outros de fora.
-- No nível `debug` o WireSock lista os programas com conexão aberta. Essas linhas são
-  descartadas antes de ir para o disco (`Test-VglLogNoise`).
+- No nível `debug` o WireSock lista os programas com conexão aberta (inclusive linhas
+  `[FILTER]: Skipping <programa>`) e gera centenas de KB por minuto. Por isso o nível é
+  `info`, e essas linhas também são descartadas antes de ir para o disco (`Test-VglLogNoise`).
+- Em 2026-11-10 o túnel subiu no PC do dono com a configuração Proton real (WireSock
+  3.8.2, pela linha de comando do Ativar). A linha que confirma o handshake é
+  `[TUN]: Handshake response received from <IP> : 51820` (nível `info`).
+- No mesmo teste, o Go Live e a câmera do Discord funcionaram pelo túnel (vistos pelo dono).
+- Com o padrão novo e o nível `info`, o Ativar mostrou "Pronto! O túnel está ativo" com o
+  horário do handshake, e o log ficou com cerca de 1 KB.
 
 ## O que ainda falta verificar
 
-1. O túnel subir no PC do dono com a configuração Proton real (a primeira tentativa falhou
-   por falta de elevação, já corrigida, mas ainda não testada de novo lá).
-2. Qual linha do log do WireSock confirma o handshake. Os padrões em
-   `HandshakePatterns` são palpites. Depois de saber, ajustar os padrões e avaliar baixar
-   o nível de log de `debug` para `info`.
-3. Se o Discord libera o Go Live e a câmera passando pelo túnel. É a premissa do projeto.
-4. A janela vista na tela e clicada por uma pessoa.
+1. A janela vista na tela e clicada por uma pessoa.
+2. O status depois do Ativar mostrar "Discord: aberto". No teste de 2026-11-10 mostrou
+   "fechado" porque foi lido antes de o Update.exe abrir o Discord.exe. O Ativar agora
+   espera até 15 segundos, mas isso ainda não foi visto funcionando.
 
 ## Entregas finais ainda devidas ao dono
 
