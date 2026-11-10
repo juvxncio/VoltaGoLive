@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Gerar o zip e publicar
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Instalar Pester
+        shell: powershell
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Verificar o repositório
+        shell: powershell
+        run: ./tools/Test-Repository.ps1
+
+      - name: Testes no Windows PowerShell 5.1
+        shell: powershell
+        run: ./tools/Invoke-Tests.ps1
+
+      - name: Gerar o pacote e o SHA256SUMS
+        shell: powershell
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: ./tools/New-ReleasePackage.ps1 -Tag $env:TAG_NAME
+
+      - name: Publicar a release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          $files = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -ne 'notas.md' } | ForEach-Object { $_.FullName })
+          gh release create $env:TAG_NAME @files --verify-tag --title "VoltaGoLive $env:TAG_NAME" --notes-file dist/notas.md
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
