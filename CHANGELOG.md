@@ -1,4 +1,4 @@
-# Changelog
+﻿hangelog
 
 Todas as mudanças relevantes deste projeto ficam registradas aqui.
 
@@ -17,6 +17,9 @@ e o projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Status com tempo ativo e último handshake.
 - Diagnóstico com relatório redigido (sem chaves, IPs, nome de usuário, nome do
   computador ou caminhos do perfil).
+- O túnel sobe com permissão de administrador (o WireSock exige isso para usar o driver
+  de rede) e é derrubado sem pedir a permissão de novo.
+- O log do túnel descarta as linhas em que o WireSock lista os programas abertos no computador.
 - Instalação do WireSock pelo winget, a partir da fonte oficial.
 - Janela com os botões Ativar, Desativar e Diagnóstico e escolha do arquivo `.conf`
   (`VoltaGoLive.bat`), feita em PowerShell, sem programa compilado.

@@ -4,8 +4,13 @@ Processo oculto que mantém o túnel do VoltaGoLive aberto.
 
 .DESCRIPTION
 Executa o wiresock-client com a configuração informada e grava a saída dele no log do
-túnel, uma linha por vez, sempre redigida (sem chaves, IPs, usuário ou nome do computador).
-Quando o log passa do tamanho máximo, o arquivo atual vira ".1" e um novo começa.
+túnel, uma linha por vez, sempre redigida (sem chaves, IPs, usuário ou nome do computador)
+e sem as linhas em que o WireSock lista os programas abertos no computador.
+
+Roda como administrador, porque o WireSock precisa disso para usar o driver de rede.
+Para parar, basta existir o arquivo de sinal (-StopFile): este processo encerra o
+wiresock-client e termina. Quando o log passa do tamanho máximo, o arquivo atual vira
+".1" e um novo começa.
 
 Este arquivo é iniciado pelo módulo (Start-VglTunnel). Não precisa ser aberto à mão.
 #>
@@ -20,6 +25,9 @@ param(
     [Parameter(Mandatory)]
     [string]$LogPath,
 
+    [Parameter(Mandatory)]
+    [string]$StopFile,
+
     [string]$LogLevel = 'debug',
 
     [long]$MaxBytes = 2097152
@@ -29,6 +37,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'VoltaGoLive.psd1') -Force
+$noise = & (Get-Module -Name VoltaGoLive) { $script:Vgl.TunnelLogNoise }
 
 $folder = Split-Path -Path $LogPath -Parent
 if (-not (Test-Path -LiteralPath $folder)) {
@@ -36,35 +45,82 @@ if (-not (Test-Path -LiteralPath $folder)) {
 }
 
 $encoding = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-$script:written = 0L
+$script:Written = 0L
+$script:Limit = $MaxBytes
+$script:Writer = $null
 
 function Open-LogWriter {
     $stream = New-Object -TypeName System.IO.FileStream -ArgumentList @(
         $LogPath, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
-    $writer = New-Object -TypeName System.IO.StreamWriter -ArgumentList @($stream, $encoding)
-    $writer.AutoFlush = $true
-    $script:written = $stream.Length
-    return $writer
+    $script:Writer = New-Object -TypeName System.IO.StreamWriter -ArgumentList @($stream, $encoding)
+    $script:Writer.AutoFlush = $true
+    $script:Written = $stream.Length
 }
 
-$writer = Open-LogWriter
+function Write-TunnelLine {
+    param([string]$Text)
+
+    if ($Text -match $noise) {
+        return
+    }
+    $line = '{0} | {1}' -f (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss'), (Protect-VoltaGoLiveText -Text $Text)
+    $script:Writer.WriteLine($line)
+    $script:Written += $line.Length + 2
+    if ($script:Written -gt $script:Limit) {
+        $script:Writer.Dispose()
+        Move-Item -LiteralPath $LogPath -Destination ($LogPath + '.1') -Force
+        Open-LogWriter
+    }
+}
+
+Open-LogWriter
+$process = $null
 try {
-    # A saída de erro de programas nativos vira registro de erro no PowerShell 5.1.
-    # Aqui ela é só texto de log, então não pode interromper o túnel.
-    $ErrorActionPreference = 'Continue'
-    & $ExePath run -config $ConfigPath -log-level $LogLevel 2>&1 | ForEach-Object {
-        $text = Protect-VoltaGoLiveText -Text ([string]$_)
-        $line = '{0} | {1}' -f (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss'), $text
-        $writer.WriteLine($line)
-        $script:written += $line.Length + 2
-        if ($script:written -gt $MaxBytes) {
-            $writer.Dispose()
-            Move-Item -LiteralPath $LogPath -Destination ($LogPath + '.1') -Force
-            $writer = Open-LogWriter
+    $info = New-Object -TypeName System.Diagnostics.ProcessStartInfo
+    $info.FileName = $ExePath
+    $info.Arguments = 'run -config "{0}" -log-level {1}' -f $ConfigPath, $LogLevel
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+
+    $process = [System.Diagnostics.Process]::Start($info)
+    $readers = @($process.StandardOutput, $process.StandardError)
+    $tasks = @($readers[0].ReadLineAsync(), $readers[1].ReadLineAsync())
+    $open = @($true, $true)
+
+    while ($open[0] -or $open[1]) {
+        foreach ($index in 0, 1) {
+            if ($open[$index] -and $tasks[$index].Wait(200)) {
+                $text = $tasks[$index].Result
+                if ($null -eq $text) {
+                    $open[$index] = $false
+                }
+                else {
+                    Write-TunnelLine -Text $text
+                    $tasks[$index] = $readers[$index].ReadLineAsync()
+                }
+            }
+        }
+        if (Test-Path -LiteralPath $StopFile) {
+            Write-TunnelLine -Text '[VoltaGoLive] Pedido de desativação recebido.'
+            break
         }
     }
-    $writer.WriteLine(('{0} | [VoltaGoLive] O wiresock-client encerrou.' -f (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')))
+}
+catch {
+    Write-TunnelLine -Text ('[VoltaGoLive] Erro no processo do túnel: ' + $_.Exception.Message)
 }
 finally {
-    $writer.Dispose()
+    if ($null -ne $process -and -not $process.HasExited) {
+        try {
+            $process.Kill()
+            $null = $process.WaitForExit(5000)
+        }
+        catch {
+            Write-TunnelLine -Text ('[VoltaGoLive] Não foi possível encerrar o wiresock-client: ' + $_.Exception.Message)
+        }
+    }
+    Write-TunnelLine -Text '[VoltaGoLive] O wiresock-client encerrou.'
+    $script:Writer.Dispose()
 }

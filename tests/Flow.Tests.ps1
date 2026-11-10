@@ -30,6 +30,7 @@ InModuleScope VoltaGoLive {
                 RuntimeDir    = Join-Path -Path $data -ChildPath 'runtime'
                 RuntimeConf   = Join-Path -Path $data -ChildPath 'runtime/voltagolive.conf'
                 StateFile     = Join-Path -Path $data -ChildPath 'estado.json'
+                StopFile      = Join-Path -Path $data -ChildPath 'parar-tunel.txt'
                 DiagnosticDir = Join-Path -Path $data -ChildPath 'diagnostico'
                 TunnelHost    = Join-Path -Path $base -ChildPath 'TunnelHost.ps1'
             }

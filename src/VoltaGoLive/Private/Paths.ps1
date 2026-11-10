@@ -38,6 +38,7 @@ function Get-VglPath {
         RuntimeDir    = $runtime
         RuntimeConf   = Join-Path -Path $runtime -ChildPath 'voltagolive.conf'
         StateFile     = Join-Path -Path $data -ChildPath 'estado.json'
+        StopFile      = Join-Path -Path $data -ChildPath 'parar-tunel.txt'
         DiagnosticDir = Join-Path -Path $data -ChildPath 'diagnostico'
         TunnelHost    = Join-Path -Path $script:ModuleRoot -ChildPath 'TunnelHost.ps1'
     }

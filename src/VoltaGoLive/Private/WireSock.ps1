@@ -78,8 +78,9 @@ function Test-VglSignature {
 }
 
 function Get-VglTunnelProcess {
-    # Processos do túnel que pertencem ao VoltaGoLive: o wiresock-client iniciado com a
-    # nossa cópia do .conf e o PowerShell oculto que grava o log redigido.
+    # Processos wiresock-client em execução. O túnel roda como administrador, e um processo
+    # comum não consegue ler a linha de comando de um processo elevado; por isso a busca é
+    # pelo nome. Quem decide se o túnel é "nosso" é a presença da cópia do .conf.
     [CmdletBinding()]
     [OutputType([System.Object[]])]
     param(
@@ -87,28 +88,56 @@ function Get-VglTunnelProcess {
         [hashtable]$Paths
     )
 
-    $exe = $script:Vgl.WireSockExe
-    $all = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-            $commandLine = [string]$_.CommandLine
-            $hasConf = $commandLine.IndexOf($Paths.RuntimeConf, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
-            $hasHost = $commandLine.IndexOf($Paths.TunnelHost, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
-            $isShell = ($_.Name -like '*powershell*') -or ($_.Name -like 'pwsh*')
-            (($_.Name -eq $exe) -and $hasConf) -or ($isShell -and $hasHost)
-        })
-
-    $result = foreach ($process in $all) {
+    if (-not (Test-Path -LiteralPath $Paths.RuntimeConf -PathType Leaf)) {
+        return @()
+    }
+    $name = [System.IO.Path]::GetFileNameWithoutExtension($script:Vgl.WireSockExe)
+    $result = foreach ($process in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
         [pscustomobject]@{
-            ProcessId  = [int]$process.ProcessId
-            Name       = [string]$process.Name
-            IsWireSock = ($process.Name -eq $exe)
+            ProcessId  = [int]$process.Id
+            Name       = $script:Vgl.WireSockExe
+            IsWireSock = $true
         }
     }
     return @($result)
 }
 
+function Test-VglLogNoise {
+    # Diz se uma linha do log do WireSock deve ser descartada. No nível de detalhe usado,
+    # o WireSock lista todos os programas do computador que têm conexão aberta. Isso não
+    # ajuda no diagnóstico e é dado pessoal, então nunca vai para o disco.
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$Line
+    )
+
+    return ($Line -match $script:Vgl.TunnelLogNoise)
+}
+
+function Get-VglTunnelFailureFix {
+    # Escolhe a orientação certa para a pessoa a partir do que o WireSock escreveu no log.
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [AllowEmptyCollection()]
+        [AllowEmptyString()]
+        [string[]]$Line = @()
+    )
+
+    $text = $Line -join "`n"
+    if ($text -match '(?i)Packet Filter driver is not available') {
+        return 'O driver de rede do WireSock não respondeu. Reinicie o computador e tente de novo. Se continuar, reinstale o WireSock: abra o PowerShell e rode "winget install --id {0} --exact --source winget --force".' -f $script:Vgl.WireSockWingetId
+    }
+    return 'Confira se o arquivo .conf é o que você baixou da Proton, sem edição. Se continuar, gere o diagnóstico e envie o relatório.'
+}
+
 function Start-VglTunnel {
-    # Sobe o túnel: abre um PowerShell oculto (TunnelHost.ps1) que executa o wiresock-client
-    # e grava a saída dele, já redigida, no log do túnel.
+    # Sobe o túnel: abre, como administrador, um PowerShell oculto (TunnelHost.ps1) que
+    # executa o wiresock-client e grava a saída dele, já redigida, no log do túnel.
+    # O WireSock só consegue usar o driver de rede com permissão de administrador.
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
@@ -122,40 +151,55 @@ function Start-VglTunnel {
         return
     }
 
-    if (Test-Path -LiteralPath $Paths.TunnelLog) {
-        Remove-Item -LiteralPath $Paths.TunnelLog -Force -ErrorAction SilentlyContinue
+    foreach ($stale in @($Paths.TunnelLog, $Paths.StopFile)) {
+        if (Test-Path -LiteralPath $stale) {
+            Remove-Item -LiteralPath $stale -Force -ErrorAction SilentlyContinue
+        }
     }
 
     $shell = (Get-Process -Id $PID).Path
-    $arguments = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -ExePath "{1}" -ConfigPath "{2}" -LogPath "{3}" -LogLevel {4} -MaxBytes {5}' -f `
-        $Paths.TunnelHost, $ExePath, $Paths.RuntimeConf, $Paths.TunnelLog, $script:Vgl.WireSockLogLevel, $script:Vgl.TunnelLogMaxBytes
+    $arguments = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -ExePath "{1}" -ConfigPath "{2}" -LogPath "{3}" -StopFile "{4}" -LogLevel {5} -MaxBytes {6}' -f `
+        $Paths.TunnelHost, $ExePath, $Paths.RuntimeConf, $Paths.TunnelLog, $Paths.StopFile, $script:Vgl.WireSockLogLevel, $script:Vgl.TunnelLogMaxBytes
 
-    $null = Start-Process -FilePath $shell -ArgumentList $arguments -WindowStyle Hidden -PassThru
+    if (-not (Test-VglAdministrator)) {
+        Write-VglMessage -Message 'O Windows vai pedir permissão de administrador: o WireSock precisa dela para usar o driver de rede. Clique em Sim.'
+    }
+    try {
+        $null = Start-Process -FilePath $shell -ArgumentList $arguments -WindowStyle Hidden -Verb RunAs -PassThru
+    }
+    catch {
+        throw (New-VglProblem -Message 'O túnel não foi iniciado porque a permissão de administrador não foi concedida.' `
+                -Fix 'Tente ativar de novo e clique em Sim quando o Windows perguntar. Sem essa permissão o WireSock não consegue criar o túnel.')
+    }
 
     $deadline = (Get-Date).AddSeconds($script:Vgl.TunnelStartTimeout)
     do {
         Start-Sleep -Milliseconds 500
-        $alive = @(Get-VglTunnelProcess -Paths $Paths | Where-Object { $_.IsWireSock }).Count -gt 0
+        $alive = @(Get-VglTunnelProcess -Paths $Paths).Count -gt 0
     } while (-not $alive -and (Get-Date) -lt $deadline)
 
     # Dá um instante para o WireSock recusar a configuração, se for o caso.
-    Start-Sleep -Seconds 2
-    $alive = @(Get-VglTunnelProcess -Paths $Paths | Where-Object { $_.IsWireSock }).Count -gt 0
+    Start-Sleep -Seconds 3
+    $alive = @(Get-VglTunnelProcess -Paths $Paths).Count -gt 0
     if (-not $alive) {
-        $tail = (Get-VglLogTail -Path $Paths.TunnelLog -Count 15) -join "`n    "
-        throw (New-VglProblem -Message ("O WireSock não ficou em execução. Últimas linhas do log do túnel:`n    " + $tail) `
-                -Fix 'Confira se o arquivo .conf é o que você baixou da Proton. Se continuar, rode o Diagnostico.bat e envie o relatório.')
+        $lines = @(Get-VglLogTail -Path $Paths.TunnelLog -Count 15)
+        throw (New-VglProblem -Message ("O WireSock não ficou em execução. Últimas linhas do log do túnel:`n    " + ($lines -join "`n    ")) `
+                -Fix (Get-VglTunnelFailureFix -Line $lines))
     }
 }
 
 function Stop-VglTunnel {
-    # Derruba o túnel: encerra o wiresock-client e, em seguida, o PowerShell oculto.
-    # Devolve quantos processos foram encerrados.
+    # Derruba o túnel. O processo do túnel roda como administrador e não pode ser encerrado
+    # por um processo comum, então o pedido é feito por um arquivo de sinal: o TunnelHost.ps1
+    # vê o arquivo, encerra o wiresock-client e termina. Assim não é preciso pedir
+    # permissão de administrador outra vez. Devolve quantos processos havia.
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([int])]
     param(
         [Parameter(Mandatory)]
-        [hashtable]$Paths
+        [hashtable]$Paths,
+
+        [int]$TimeoutSeconds = 15
     )
 
     $processes = @(Get-VglTunnelProcess -Paths $Paths)
@@ -163,13 +207,26 @@ function Stop-VglTunnel {
         return 0
     }
 
-    foreach ($process in @($processes | Where-Object { $_.IsWireSock })) {
-        Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+    $folder = Split-Path -Path $Paths.StopFile -Parent
+    if (-not (Test-Path -LiteralPath $folder)) {
+        $null = New-Item -Path $folder -ItemType Directory -Force
     }
-    Start-Sleep -Milliseconds 800
+    [System.IO.File]::WriteAllText($Paths.StopFile, 'parar')
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while (@(Get-VglTunnelProcess -Paths $Paths).Count -gt 0 -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 500
+    }
+
+    # Último recurso: funciona quando quem chama também é administrador.
     foreach ($process in @(Get-VglTunnelProcess -Paths $Paths)) {
         Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
     }
+    Remove-Item -LiteralPath $Paths.StopFile -Force -ErrorAction SilentlyContinue
 
+    if (@(Get-VglTunnelProcess -Paths $Paths).Count -gt 0) {
+        throw (New-VglProblem -Message 'Não consegui encerrar o WireSock.' `
+                -Fix 'Reinicie o computador: isso derruba o túnel. Depois, se quiser, gere o diagnóstico e envie o relatório.')
+    }
     return $processes.Count
 }

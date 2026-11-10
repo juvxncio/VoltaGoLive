@@ -121,30 +121,122 @@ InModuleScope VoltaGoLive {
         BeforeEach {
             Mock Start-Sleep { }
             Mock Stop-Process { }
-            $script:Paths = @{ RuntimeConf = 'x.conf'; TunnelHost = 'TunnelHost.ps1' }
+            $script:Paths = @{
+                RuntimeConf = Join-Path -Path $TestDrive -ChildPath 'x.conf'
+                StopFile    = Join-Path -Path $TestDrive -ChildPath 'sinal/parar-tunel.txt'
+            }
         }
 
-        It 'encerra primeiro o wiresock-client e depois o que sobrou' {
+        It 'pede a parada pelo arquivo de sinal, sem precisar de administrador' {
             $script:Calls = 0
+            $script:SignalSeen = $false
             Mock Get-VglTunnelProcess {
                 $script:Calls++
-                if ($script:Calls -eq 1) {
-                    return @(
-                        [pscustomobject]@{ ProcessId = 100; Name = 'powershell.exe'; IsWireSock = $false }
-                        [pscustomobject]@{ ProcessId = 200; Name = 'wiresock-client.exe'; IsWireSock = $true }
-                    )
+                if (Test-Path -LiteralPath $script:Paths.StopFile) {
+                    $script:SignalSeen = $true
                 }
-                return @([pscustomobject]@{ ProcessId = 100; Name = 'powershell.exe'; IsWireSock = $false })
+                if ($script:Calls -le 2) {
+                    return @([pscustomobject]@{ ProcessId = 200; Name = 'wiresock-client.exe'; IsWireSock = $true })
+                }
+                return @()
             }
-            Stop-VglTunnel -Paths $script:Paths | Should -Be 2
+            Stop-VglTunnel -Paths $script:Paths | Should -Be 1
+            $script:SignalSeen | Should -BeTrue
+            Should -Invoke Stop-Process -Times 0
+            Test-Path -LiteralPath $script:Paths.StopFile | Should -BeFalse
+        }
+
+        It 'explica o que fazer quando o WireSock não encerra' {
+            Mock Get-VglTunnelProcess {
+                return @([pscustomobject]@{ ProcessId = 200; Name = 'wiresock-client.exe'; IsWireSock = $true })
+            }
+            { Stop-VglTunnel -Paths $script:Paths -TimeoutSeconds 0 } | Should -Throw '*Reinicie o computador*'
             Should -Invoke Stop-Process -Times 1 -Exactly -ParameterFilter { $Id -eq 200 }
-            Should -Invoke Stop-Process -Times 1 -Exactly -ParameterFilter { $Id -eq 100 }
         }
 
         It 'devolve zero quando não há túnel' {
             Mock Get-VglTunnelProcess { return @() }
             Stop-VglTunnel -Paths $script:Paths | Should -Be 0
-            Should -Invoke Stop-Process -Times 0
+            Test-Path -LiteralPath $script:Paths.StopFile | Should -BeFalse
+        }
+    }
+
+    Describe 'Start-VglTunnel' {
+        BeforeEach {
+            Mock Start-Sleep { }
+            Mock Write-VglMessage { }
+            Mock Test-VglAdministrator { return $false }
+            $script:Paths = @{
+                RuntimeConf = Join-Path -Path $TestDrive -ChildPath 'r.conf'
+                TunnelLog   = Join-Path -Path $TestDrive -ChildPath 'tunel.log'
+                StopFile    = Join-Path -Path $TestDrive -ChildPath 'parar-tunel.txt'
+                TunnelHost  = Join-Path -Path $TestDrive -ChildPath 'TunnelHost.ps1'
+            }
+        }
+
+        It 'inicia o processo do túnel como administrador e avisa a pessoa antes' {
+            Mock Start-Process { }
+            Mock Get-VglTunnelProcess { return @([pscustomobject]@{ ProcessId = 1; Name = 'wiresock-client.exe'; IsWireSock = $true }) }
+            Set-Content -LiteralPath $script:Paths.StopFile -Value 'velho'
+            Start-VglTunnel -ExePath 'wiresock-client.exe' -Paths $script:Paths
+            Should -Invoke Start-Process -Times 1 -Exactly -ParameterFilter {
+                $Verb -eq 'RunAs' -and $ArgumentList -like '*TunnelHost.ps1*' -and $ArgumentList -like '*-StopFile*'
+            }
+            Should -Invoke Write-VglMessage -ParameterFilter { $Message -like '*permissão de administrador*' }
+            Test-Path -LiteralPath $script:Paths.StopFile | Should -BeFalse
+        }
+
+        It 'explica o que fazer quando a permissão de administrador é recusada' {
+            Mock Start-Process { throw 'The operation was canceled by the user.' }
+            Mock Get-VglTunnelProcess { return @() }
+            { Start-VglTunnel -ExePath 'wiresock-client.exe' -Paths $script:Paths } | Should -Throw '*permissão de administrador não foi concedida*O que fazer:*'
+        }
+
+        It 'orienta a reiniciar quando o driver do WireSock não responde' {
+            Mock Start-Process { }
+            Mock Get-VglTunnelProcess { return @() }
+            Set-Content -LiteralPath $script:Paths.RuntimeConf -Value 'x'
+            Mock Get-VglLogTail { return 'x | Failed to run WireSock service: Windows Packet Filter driver is not available!' }
+            { Start-VglTunnel -ExePath 'wiresock-client.exe' -Paths $script:Paths } | Should -Throw '*Reinicie o computador*'
+        }
+    }
+
+    Describe 'Get-VglTunnelProcess' {
+        It 'não considera túnel nosso quando a cópia do .conf não existe' {
+            $paths = @{ RuntimeConf = Join-Path -Path $TestDrive -ChildPath 'nao-existe.conf' }
+            @(Get-VglTunnelProcess -Paths $paths).Count | Should -Be 0
+        }
+
+        It 'procura o wiresock-client pelo nome quando a cópia existe' {
+            $paths = @{ RuntimeConf = Join-Path -Path $TestDrive -ChildPath 'existe.conf' }
+            Set-Content -LiteralPath $paths.RuntimeConf -Value 'x'
+            Mock Get-Process { return @([pscustomobject]@{ Id = 77 }) } -ParameterFilter { $Name -eq 'wiresock-client' }
+            $found = @(Get-VglTunnelProcess -Paths $paths)
+            $found.Count | Should -Be 1
+            $found[0].ProcessId | Should -Be 77
+        }
+    }
+
+    Describe 'Test-VglLogNoise' {
+        It 'descarta a linha que lista programas do computador: <Line>' -ForEach @(
+            @{ Line = '{"log_level":"debug","message":"Resolved TCPv4 owner: pid=20200 tag=0 name=\"firefox.exe\" path=\"C:\\\\x\\\\firefox.exe\""}' }
+            @{ Line = '{"log_level":"debug","message":"Resolved UDPv6 owner: pid=9288 tag=0 name=\"Jogo.exe\""}' }
+            @{ Line = '{"log_level":"debug","message":"Failed to resolve UDPv4 owner: pid=9508 tag=0 error=module_not_found"}' }
+            @{ Line = '{"log_level":"debug","message":"TCPv4 entry with system process PID = 0 (Idle) skipping resolution"}' }
+            @{ Line = '{"log_level":"debug","message":"Successfully removed filter(s) with ID: 3 from driver"}' }
+            @{ Line = '{"log_level":"debug","message":"Removing filter with ID: 3 from internal list at position: 0"}' }
+        ) {
+            Test-VglLogNoise -Line $Line | Should -BeTrue
+        }
+
+        It 'mantém a linha útil: <Line>' -ForEach @(
+            @{ Line = '{"log_level":"info","message":"[TUN]: force_handshake: Handshake initiation sent to WireGuard server"}' }
+            @{ Line = '{"log_level":"info","message":"[MGR]: Tunnel has started"}' }
+            @{ Line = 'Failed to run WireSock service: Windows Packet Filter driver is not available!' }
+            @{ Line = '{"log_level":"debug","message":"[FILTER]: DISCORD.EXE : TCP : a -> b"}' }
+            @{ Line = '' }
+        ) {
+            Test-VglLogNoise -Line $Line | Should -BeFalse
         }
     }
 

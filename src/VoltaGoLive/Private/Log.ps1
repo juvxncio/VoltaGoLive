@@ -63,8 +63,10 @@ function Get-VglLogTail {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         return [string[]]@()
     }
-    $lines = @(Get-Content -LiteralPath $Path -Tail $Count -Encoding UTF8 | ForEach-Object {
-            Protect-VoltaGoLiveText -Text ([string]$_)
-        })
+    # Logs gravados por versões antigas podem conter a lista de programas abertos: fora.
+    $lines = @(Get-Content -LiteralPath $Path -Tail ($Count * 4) -Encoding UTF8 |
+            Where-Object { -not (Test-VglLogNoise -Line ([string]$_)) } |
+            Select-Object -Last $Count |
+            ForEach-Object { Protect-VoltaGoLiveText -Text ([string]$_) })
     return [string[]]$lines
 }

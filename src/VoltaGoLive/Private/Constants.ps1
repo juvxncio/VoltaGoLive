@@ -13,8 +13,9 @@ $script:Vgl = @{
     WireSockLogLevel   = 'debug'
     ProtonConfigUrl    = 'https://account.protonvpn.com/downloads'
     HandshakeTimeout   = 45
-    TunnelStartTimeout = 8
+    TunnelStartTimeout = 20
     TunnelLogMaxBytes  = 2MB
+    TunnelLogNoise     = '(?i)(?:resolve[d]? (?:TCP|UDP)v[46] owner|entry with system process PID|filter\(s\) with ID|Removing filter with ID)'
     HandshakePatterns  = @(
         'received handshake[_ ]response'
         'handshake[_ ](?:complete|completed|established|successful|succeeded|done)'
