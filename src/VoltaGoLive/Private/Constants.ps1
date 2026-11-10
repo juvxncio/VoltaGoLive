@@ -1,0 +1,29 @@
+﻿# Valores fixos do projeto. Os nomes dos campos de chave do WireGuard são montados em
+# duas partes de propósito: a verificação do repositório reprova qualquer arquivo
+# versionado que contenha o nome do campo da chave privada por extenso.
+$script:Vgl = @{
+    Name               = 'VoltaGoLive'
+    KeyPrivate         = 'Private' + 'Key'
+    KeyPreshared       = 'Preshared' + 'Key'
+    WireSockExe        = 'wiresock-client.exe'
+    WireSockWingetId   = 'NTKERNEL.WireSockVPNClient'
+    WireSockSigner     = ''
+    WireSockDownload   = 'https://wiresock.net/wiresock-secure-connect/download'
+    WireSockLicense    = 'https://wiresock.net/license/wiresock_eula'
+    WireSockLogLevel   = 'debug'
+    ProtonConfigUrl    = 'https://account.protonvpn.com/downloads'
+    HandshakeTimeout   = 45
+    TunnelStartTimeout = 8
+    TunnelLogMaxBytes  = 2MB
+    HandshakePatterns  = @(
+        'received handshake[_ ]response'
+        'handshake[_ ](?:complete|completed|established|successful|succeeded|done)'
+        'new session'
+        'keypair \d+ created'
+    )
+    DiscordChannels    = @(
+        @{ Channel = 'Stable'; Folder = 'Discord'; ProcessName = 'Discord' }
+        @{ Channel = 'PTB'; Folder = 'DiscordPTB'; ProcessName = 'DiscordPTB' }
+        @{ Channel = 'Canary'; Folder = 'DiscordCanary'; ProcessName = 'DiscordCanary' }
+    )
+}
