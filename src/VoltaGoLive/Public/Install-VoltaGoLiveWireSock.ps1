@@ -10,7 +10,9 @@
     WireSock instala um driver de rede.
 
     O VoltaGoLive não baixa nem redistribui nenhum arquivo do WireSock por conta própria.
-    Se o winget não existir no computador, a função explica como instalar à mão.
+    O pacote instalado é o "WireSock Secure Connect CLI" (NTKERNEL.WireSockVPNClientCLI),
+    que traz o wiresock-client.exe. O pacote com interface gráfica não traz esse arquivo.
+    Se o winget não existir no computador, a função explica o que fazer.
 
     .EXAMPLE
     Install-VoltaGoLiveWireSock
@@ -29,10 +31,10 @@
     $winget = Get-Command -Name 'winget.exe' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($null -eq $winget) {
         throw (New-VglProblem -Message 'O winget (instalador de programas do Windows) não está disponível neste computador.' `
-                -Fix ('Baixe e instale o WireSock Secure Connect pelo site oficial: {0}. Depois rode o Ativar.bat de novo.' -f $script:Vgl.WireSockDownload))
+                -Fix ('Instale o "Instalador de Aplicativo" pela Microsoft Store (ele traz o winget; veja {0}) e rode o Ativar.bat de novo.' -f $script:Vgl.WingetHelp))
     }
 
-    Write-VglMessage -Message 'Vou instalar o WireSock Secure Connect pelo winget (fonte oficial).'
+    Write-VglMessage -Message 'Vou instalar o WireSock Secure Connect CLI pelo winget (fonte oficial).'
     Write-VglMessage -Message 'O Windows vai pedir permissão de administrador: o WireSock instala um driver de rede, e isso exige essa permissão.'
     Write-VglMessage -Message ('O WireSock é gratuito para uso pessoal. Licença: {0}' -f $script:Vgl.WireSockLicense)
 
@@ -48,7 +50,7 @@
     $path = Find-VglWireSock
     if ([string]::IsNullOrEmpty($path)) {
         throw (New-VglProblem -Message 'A instalação terminou, mas não encontrei o wiresock-client.exe.' `
-                -Fix ('Instale o WireSock Secure Connect pelo site oficial ({0}) e rode o Ativar.bat de novo.' -f $script:Vgl.WireSockDownload))
+                -Fix ('Abra o PowerShell, rode "winget install --id {0} --exact --source winget" e depois rode o Ativar.bat de novo.' -f $script:Vgl.WireSockWingetId))
     }
     return $path
 }

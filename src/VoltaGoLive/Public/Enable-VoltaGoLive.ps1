@@ -51,14 +51,14 @@
     if ([string]::IsNullOrEmpty($exe)) {
         if (-not $InstallWireSock) {
             throw (New-VglProblem -Message 'O WireSock não está instalado.' `
-                    -Fix ('Rode o Ativar.bat e responda S quando ele oferecer a instalação, ou instale pelo site oficial: {0}' -f $script:Vgl.WireSockDownload))
+                    -Fix ('Rode o Ativar.bat e responda S quando ele oferecer a instalação. Se preferir instalar à mão, abra o PowerShell e rode "winget install --id {0} --exact --source winget".' -f $script:Vgl.WireSockWingetId))
         }
         $exe = Install-VoltaGoLiveWireSock
     }
     $signature = Get-VglSignature -Path $exe
     if (-not (Test-VglSignature -Signature $signature)) {
         throw (New-VglProblem -Message ('O arquivo do WireSock não tem uma assinatura digital válida do publicador esperado (situação: {0}).' -f $signature.Status) `
-                -Fix ('Por segurança, não vou executar esse arquivo. Reinstale o WireSock pelo site oficial: {0}' -f $script:Vgl.WireSockDownload))
+                -Fix ('Por segurança, não vou executar esse arquivo. Reinstale o WireSock: abra o PowerShell e rode "winget install --id {0} --exact --source winget --force".' -f $script:Vgl.WireSockWingetId))
     }
 
     # 2. .conf presente e válido

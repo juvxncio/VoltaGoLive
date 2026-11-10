@@ -60,7 +60,7 @@ programa compilado e não redistribui o WireSock (ele é instalado da fonte ofic
 - Windows 10 ou 11.
 - Discord instalado (versão normal, PTB ou Canary).
 - Uma conta Proton VPN (a gratuita serve).
-- WireSock Secure Connect (o `Ativar.bat` oferece a instalação).
+- WireSock Secure Connect CLI (o `Ativar.bat` oferece a instalação pelo winget).
 
 ## Passo a passo
 
@@ -121,9 +121,9 @@ Cada release traz um arquivo `SHA256SUMS` com a "impressão digital" do zip. Par
 | `Não encontrei nenhum arquivo .conf na pasta "config"` | Refaça o passo 2 e coloque o `.conf` na pasta `config` |
 | `Há N arquivos .conf na pasta "config"` | Deixe só um arquivo `.conf` na pasta |
 | `O arquivo .conf tem problemas` | Baixe o arquivo de novo na Proton, sem editar |
-| `O WireSock não está instalado` | Rode o `Ativar.bat` e responda `S`, ou instale pelo [site oficial](https://wiresock.net/wiresock-secure-connect/download) |
-| `O winget não está disponível` | Instale o WireSock pelo [site oficial](https://wiresock.net/wiresock-secure-connect/download) |
-| `não tem uma assinatura digital válida` | Reinstale o WireSock pelo site oficial. Por segurança o VoltaGoLive não executa arquivos sem assinatura válida |
+| `O WireSock não está instalado` | Rode o `Ativar.bat` e responda `S`. Ter só o WireSock com janela (interface gráfica) não basta: o VoltaGoLive usa o pacote de linha de comando |
+| `O winget não está disponível` | Instale o "Instalador de Aplicativo" pela Microsoft Store e rode o `Ativar.bat` de novo |
+| `não tem uma assinatura digital válida` | Reinstale o WireSock com o comando que a mensagem mostra. Por segurança o VoltaGoLive só executa o WireSock com assinatura válida do fabricante |
 | `O WireSock não ficou em execução` | Rode o `Diagnostico.bat` e envie o relatório |
 | `não consegui confirmar o handshake` | Teste o Go Live mesmo assim. Se não funcionar, baixe uma configuração de outro servidor na Proton e tente de novo |
 | O túnel ativa, mas o Go Live continua bloqueado | Confira se o servidor escolhido na Proton fica fora do Brasil. Rode o `Diagnostico.bat` e veja se `AllowedIPs cobre IPv6 inteiro` está como `True`; se estiver `False` e a sua internet usar IPv6, parte do Discord pode estar saindo fora do túnel |
@@ -171,7 +171,7 @@ relatórios de diagnóstico).
 2. Apague a pasta onde você extraiu o VoltaGoLive (o seu `.conf` está dentro dela, na pasta `config`).
 3. Apague a pasta de dados: aperte `Win + R`, digite `%LOCALAPPDATA%` e apague a pasta `VoltaGoLive`.
 4. Se quiser remover também o WireSock: **Configurações > Aplicativos**, procure por
-   **WireSock** e desinstale. Ou, no PowerShell: `winget uninstall NTKERNEL.WireSockVPNClient`.
+   **WireSock** e desinstale. Ou, no PowerShell: `winget uninstall NTKERNEL.WireSockVPNClientCLI`.
 5. Se quiser invalidar a configuração: em <https://account.protonvpn.com>, em **Downloads**,
    apague a configuração WireGuard que você criou.
 
@@ -182,7 +182,7 @@ O VoltaGoLive não cria serviços do Windows, tarefas agendadas nem entradas no 
 - Logs e relatórios passam sempre por uma redação que remove chaves, endereços IP, nome de
   usuário, nome do computador e caminhos do perfil.
 - O código não lê variáveis de ambiente em massa. Lê só as necessárias, pelo nome.
-- O WireSock só é executado se o arquivo tiver assinatura digital válida.
+- O WireSock só é executado se o arquivo tiver assinatura digital válida do fabricante.
 - Encontrou uma falha de segurança? Veja o [SECURITY.md](SECURITY.md).
 
 ## Estado dos testes

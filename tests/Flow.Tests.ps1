@@ -48,7 +48,7 @@ InModuleScope VoltaGoLive {
             Mock Write-VglMessage { }
             Mock Start-Sleep { }
             Mock Find-VglWireSock { return $script:FakeExe }
-            Mock Get-VglSignature { return [pscustomobject]@{ Status = 'Valid'; Subject = 'CN=Publicador' } }
+            Mock Get-VglSignature { return [pscustomobject]@{ Status = 'Valid'; Subject = 'CN=The Anti-Cloud Corporation, O=The Anti-Cloud Corporation, C=US' } }
             Mock Test-VglAdministrator { return $false }
             Mock Get-VglDiscordProcess { return @() }
             Mock Stop-VglDiscord { $script:Order.Add('fechar-discord'); return 'Stable' }
@@ -109,6 +109,12 @@ InModuleScope VoltaGoLive {
 
             It 'recusa executar o WireSock com assinatura inválida' {
                 Mock Get-VglSignature { return [pscustomobject]@{ Status = 'HashMismatch'; Subject = '' } }
+                { Enable-VoltaGoLive } | Should -Throw '*assinatura digital*'
+                $script:Order.Count | Should -Be 0
+            }
+
+            It 'recusa executar um arquivo com assinatura válida de outro publicador' {
+                Mock Get-VglSignature { return [pscustomobject]@{ Status = 'Valid'; Subject = 'CN=Outra Empresa, C=US' } }
                 { Enable-VoltaGoLive } | Should -Throw '*assinatura digital*'
                 $script:Order.Count | Should -Be 0
             }
