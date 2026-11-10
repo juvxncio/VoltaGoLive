@@ -8,16 +8,35 @@ Erros aparecem com a explicação do que fazer.
 
 .PARAMETER Action
 Ativar, Desativar, Status ou Diagnostico.
+
+.PARAMETER InstallWireSock
+Na ação Ativar, instala o WireSock sem perguntar, se ele não estiver instalado.
+
+.PARAMETER NonInteractive
+Nunca faz perguntas no console. Usado pela janela (scripts/Janela.ps1), que pergunta por conta própria.
+
+.PARAMETER Utf8Output
+Escreve a saída em UTF-8, para a janela conseguir ler os acentos.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [ValidateSet('Ativar', 'Desativar', 'Status', 'Diagnostico')]
-    [string]$Action
+    [string]$Action,
+
+    [switch]$InstallWireSock,
+
+    [switch]$NonInteractive,
+
+    [switch]$Utf8Output
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ($Utf8Output) {
+    [Console]::OutputEncoding = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+}
 
 function Write-Line {
     param([string]$Text = '', [string]$Color = 'Gray')
@@ -68,10 +87,10 @@ try {
     switch ($Action) {
         'Ativar' {
             try {
-                $status = Enable-VoltaGoLive
+                $status = Enable-VoltaGoLive -InstallWireSock:$InstallWireSock
             }
             catch {
-                if ($_.Exception.Message -notlike 'O WireSock não está instalado.*') {
+                if ($NonInteractive -or $_.Exception.Message -notlike 'O WireSock não está instalado.*') {
                     throw
                 }
                 Write-Line -Text 'O WireSock (programa que cria o túnel) ainda não está instalado.' -Color 'Yellow'
