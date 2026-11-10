@@ -123,5 +123,13 @@
         Write-VglMessage -Kind 'Aviso' -Message 'Teste o Go Live no Discord. Se não funcionar, rode o Diagnostico.bat e envie o relatório.'
     }
 
+    # O Update.exe leva alguns segundos para abrir o Discord.exe. Espera até 15 segundos
+    # para o status não dizer "fechado" com o Discord ainda abrindo.
+    if ($opened.Count -gt 0) {
+        for ($try = 0; $try -lt 30 -and @(Get-VglDiscordProcess).Count -eq 0; $try++) {
+            Start-Sleep -Milliseconds 500
+        }
+    }
+
     return (Get-VoltaGoLiveStatus)
 }
