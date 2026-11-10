@@ -1,0 +1,3 @@
+Coloque aqui o arquivo .conf que voce baixou na sua conta Proton.
+Deixe so UM arquivo .conf nesta pasta.
+Este arquivo contem a sua chave: nunca envie para ninguem.
