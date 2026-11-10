@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Lint, testes e segredos
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Instalar Pester no Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Instalar Pester e PSScriptAnalyzer no PowerShell 7
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+
+      - name: Verificar o repositório (chaves, travessão, caminhos, BOM)
+        shell: pwsh
+        run: ./tools/Test-Repository.ps1
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: ./tools/Invoke-Lint.ps1
+
+      - name: Testes no Windows PowerShell 5.1
+        shell: powershell
+        run: ./tools/Invoke-Tests.ps1
+
+      - name: Testes no PowerShell 7
+        shell: pwsh
+        run: ./tools/Invoke-Tests.ps1
+
+      - name: gitleaks (histórico inteiro)
+        shell: pwsh
+        run: |
+          $version = '8.30.1'
+          $expected = 'd29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e'
+          $zip = Join-Path -Path $env:RUNNER_TEMP -ChildPath 'gitleaks.zip'
+          $folder = Join-Path -Path $env:RUNNER_TEMP -ChildPath 'gitleaks'
+          Invoke-WebRequest -Uri "https://github.com/gitleaks/gitleaks/releases/download/v$version/gitleaks_${version}_windows_x64.zip" -OutFile $zip
+          $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'O SHA256 do gitleaks baixado não confere.' }
+          Expand-Archive -LiteralPath $zip -DestinationPath $folder -Force
+          & (Join-Path -Path $folder -ChildPath 'gitleaks.exe') git --redact --no-banner --exit-code 1 .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
