@@ -152,6 +152,20 @@ try {
     $server = Get-WireGuardKeyPair -Name 'server'
     $client = Get-WireGuardKeyPair -Name 'client'
 
+    # Instalar o driver do WireSock pode derrubar a rede por alguns segundos. Mede quanto.
+    $clock = [System.Diagnostics.Stopwatch]::StartNew()
+    $online = $false
+    while (-not $online -and $clock.Elapsed.TotalSeconds -lt 90) {
+        try {
+            $null = [System.Net.Dns]::GetHostAddresses('github.com')
+            $online = $true
+        }
+        catch {
+            Start-Sleep -Seconds 2
+        }
+    }
+    Add-Check -Name 'A rede voltou depois da instalação do driver' -Passed $online -Detail ('(em {0:N0} s)' -f $clock.Elapsed.TotalSeconds)
+
     $archive = Join-Path -Path $work -ChildPath 'wireproxy.tar.gz'
     Invoke-WebRequest -Uri 'https://github.com/windtf/wireproxy/releases/download/v1.1.3/wireproxy_windows_amd64.tar.gz' -OutFile $archive
     $archiveHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
