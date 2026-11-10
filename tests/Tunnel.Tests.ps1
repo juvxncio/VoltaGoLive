@@ -16,6 +16,7 @@ InModuleScope VoltaGoLive {
         }
 
         It 'confirma com a linha "<Text>"' -ForEach @(
+            @{ Text = '{"log_level":"info","message":"[TUN]: Handshake response received from <IP> : 51820"}' }
             @{ Text = '[TUN]: Received handshake_response' }
             @{ Text = 'Received handshake response from peer' }
             @{ Text = 'Handshake completed' }
@@ -225,6 +226,7 @@ InModuleScope VoltaGoLive {
             @{ Line = '{"log_level":"debug","message":"TCPv4 entry with system process PID = 0 (Idle) skipping resolution"}' }
             @{ Line = '{"log_level":"debug","message":"Successfully removed filter(s) with ID: 3 from driver"}' }
             @{ Line = '{"log_level":"debug","message":"Removing filter with ID: 3 from internal list at position: 0"}' }
+            @{ Line = '{"log_level":"debug","message":"[FILTER]: Skipping %USERPROFILE%\\APPDATA\\LOCAL\\JOGO\\JOGO.EXE : UDP : <IP>:1 -> <IP>:443"}' }
         ) {
             Test-VglLogNoise -Line $Line | Should -BeTrue
         }

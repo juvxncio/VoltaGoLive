@@ -10,13 +10,15 @@ $script:Vgl = @{
     WireSockSigner     = 'The Anti-Cloud Corporation'
     WingetHelp         = 'https://learn.microsoft.com/windows/package-manager/winget/'
     WireSockLicense    = 'https://wiresock.net/license/wiresock_eula'
-    WireSockLogLevel   = 'debug'
+    WireSockLogLevel   = 'info'
     ProtonConfigUrl    = 'https://account.protonvpn.com/downloads'
     HandshakeTimeout   = 45
     TunnelStartTimeout = 20
     TunnelLogMaxBytes  = 2MB
-    TunnelLogNoise     = '(?i)(?:resolve[d]? (?:TCP|UDP)v[46] owner|entry with system process PID|filter\(s\) with ID|Removing filter with ID)'
+    TunnelLogNoise     = '(?i)(?:resolve[d]? (?:TCP|UDP)v[46] owner|entry with system process PID|filter\(s\) with ID|Removing filter with ID|\[FILTER\]: Skipping )'
     HandshakePatterns  = @(
+        # Visto no WireSock 3.8.2 com servidor Proton real.
+        'handshake response received'
         'received handshake[_ ]response'
         'handshake[_ ](?:complete|completed|established|successful|succeeded|done)'
         'new session'
